@@ -1,0 +1,19 @@
+[Unit]
+Description=TunnelOps Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/tunnelops/server
+EnvironmentFile=/opt/tunnelops/server/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/tunnelops/server/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8080 --workers 1 --log-level info --timeout-graceful-shutdown 10
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

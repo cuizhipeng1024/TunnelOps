@@ -1,12 +1,14 @@
 import asyncio
+import logging
 import threading
 
 import paramiko
 from paramiko import SSHClient
 
 from app.ssh_keys import load_private_key
-
 from app.tunnel import TunnelManager, TunnelSession
+
+logger = logging.getLogger("tunnelops.ssh")
 
 
 class TunnelSocket:
@@ -97,9 +99,12 @@ async def connect_ssh_via_tunnel(
     *,
     password: str | None = None,
     private_key: str | None = None,
+    connect_timeout: float = 20.0,
 ) -> SSHClient:
     loop = asyncio.get_running_loop()
+    logger.info("Opening tunnel agent_id=%s target=%s:%s user=%s", agent_id, host, port, username)
     session = await manager.open_tunnel(agent_id, host, port)
+    logger.info("Tunnel ready session_id=%s, starting SSH handshake", session.session_id)
 
     def _connect() -> SSHClient:
         sock = TunnelSocket(session, manager, loop)
@@ -117,12 +122,15 @@ async def connect_ssh_via_tunnel(
             sock=sock,
             allow_agent=False,
             look_for_keys=False,
-            timeout=15,
+            timeout=connect_timeout,
+            banner_timeout=connect_timeout,
+            auth_timeout=connect_timeout,
         )
         return client
 
     try:
-        return await asyncio.to_thread(_connect)
+        return await asyncio.wait_for(asyncio.to_thread(_connect), timeout=connect_timeout + 5)
     except Exception:
+        logger.exception("SSH connect failed agent_id=%s target=%s:%s", agent_id, host, port)
         await manager.close_tunnel(session)
         raise

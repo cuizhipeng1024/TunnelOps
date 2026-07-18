@@ -2,6 +2,7 @@
 """TunnelOps Agent - reverse tunnel client for internal devices."""
 
 import asyncio
+import contextlib
 import json
 import os
 import sys
@@ -30,6 +31,7 @@ class TunnelConnection:
         self.ws = ws
         self.reader = None
         self.writer = None
+        self._write_lock = asyncio.Lock()
 
     async def start(self):
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
@@ -59,9 +61,10 @@ class TunnelConnection:
                 self.writer.close()
 
     async def write(self, data: bytes):
-        if self.writer:
-            self.writer.write(data)
-            await self.writer.drain()
+        async with self._write_lock:
+            if self.writer:
+                self.writer.write(data)
+                await self.writer.drain()
 
 
 async def handle_message(message: dict, ws) -> None:
@@ -105,9 +108,25 @@ async def run_agent() -> None:
         try:
             async with websockets.connect(WS_URL, ping_interval=20, ping_timeout=60) as ws:
                 print("Connected to server")
-                async for raw in ws:
-                    message = json.loads(raw)
-                    await handle_message(message, ws)
+                inbox: asyncio.Queue[dict] = asyncio.Queue()
+
+                async def receiver():
+                    async for raw in ws:
+                        await inbox.put(json.loads(raw))
+
+                async def processor():
+                    while True:
+                        message = await inbox.get()
+                        await handle_message(message, ws)
+
+                recv_task = asyncio.create_task(receiver())
+                proc_task = asyncio.create_task(processor())
+                try:
+                    await recv_task
+                finally:
+                    proc_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await proc_task
         except Exception as exc:
             print(f"Connection lost: {exc}, reconnecting in 5s...")
             await asyncio.sleep(5)
