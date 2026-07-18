@@ -7,6 +7,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from app.auth import decode_token, log_audit
 from app.database import async_session
 from app.models import Agent, AuditAction, User
+from app.errors import format_shell_error
 from app.ssh_bridge import connect_ssh_via_tunnel
 from app.tunnel import tunnel_manager
 
@@ -98,7 +99,7 @@ async def shell_session(websocket: WebSocket, agent_id: int):
                 host,
                 agent.ssh_port,
             )
-            await websocket.send_json({"type": "error", "message": str(exc)})
+            await websocket.send_json({"type": "error", "message": format_shell_error(exc, host, agent.ssh_port)})
             await websocket.close()
             return
 

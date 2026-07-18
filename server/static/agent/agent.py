@@ -77,8 +77,9 @@ async def handle_message(message: dict, ws) -> None:
             tunnel_connections[session_id] = conn
             await ws.send(json.dumps({"type": "tunnel_ready", "session_id": session_id}))
         except Exception as exc:
+            err = str(exc)
             await ws.send(
-                json.dumps({"type": "tunnel_error", "session_id": session_id, "error": str(exc)})
+                json.dumps({"type": "tunnel_error", "session_id": session_id, "error": err})
             )
 
     elif msg_type == "tunnel_data":

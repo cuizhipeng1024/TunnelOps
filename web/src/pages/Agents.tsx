@@ -172,7 +172,11 @@ export default function Agents() {
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={2} />
           </Form.Item>
-          <Form.Item name="host" label="SSH 目标地址（Agent 本机视角）">
+          <Form.Item
+            name="host"
+            label="SSH 目标地址"
+            extra="Agent 所在机器访问 SSH 时用的地址。Agent 与 SSH 在同一台机器填 127.0.0.1；不要填公网 Server 域名。"
+          >
             <Input placeholder="127.0.0.1" />
           </Form.Item>
           <Form.Item name="ssh_port" label="SSH 端口">
