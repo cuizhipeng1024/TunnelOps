@@ -399,12 +399,15 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$INSTALL_DIR
+Environment=PYTHONUNBUFFERED=1
 Environment=TUNNELOPS_SERVER=$SERVER_URL
 Environment=TUNNELOPS_TOKEN=$AGENT_TOKEN
 Environment=TUNNELOPS_NAME=$AGENT_NAME
 ExecStart=$VENV_DIR/bin/python $INSTALL_DIR/agent.py
 Restart=always
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
