@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -61,23 +61,19 @@ if web_dir.exists():
     app.mount("/assets", StaticFiles(directory=str(web_dir / "assets")), name="assets")
 
     @app.get("/{full_path:path}")
-    async def spa_fallback(full_path: str, request: Request):
+    async def spa_fallback(full_path: str):
         if full_path.startswith("api/"):
             from fastapi import HTTPException
 
-            raise HTTPException(status_code=404)
+            raise HTTPException(status_code=404, detail="Not Found")
         index = web_dir / "index.html"
         if index.exists():
             return FileResponse(index)
         return {"message": "Web UI not built. Run: cd web && npm install && npm run build"}
 
 
-@app.get("/api/health")
-async def health():
-    return {"status": "ok", "service": settings.app_name}
-
-
 if __name__ == "__main__":
+    import logging
     import uvicorn
 
     logging.basicConfig(

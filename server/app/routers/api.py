@@ -33,6 +33,13 @@ from app.tunnel import tunnel_manager
 router = APIRouter(prefix="/api")
 
 
+@router.get("/health")
+async def health():
+    from app.config import settings
+
+    return {"status": "ok", "service": settings.app_name}
+
+
 @router.post("/auth/login", response_model=Token)
 async def login(
     request: Request,
