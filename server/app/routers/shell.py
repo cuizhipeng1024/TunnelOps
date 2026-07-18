@@ -1,15 +1,16 @@
 import asyncio
 import json
-import struct
+import logging
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.auth import decode_token, log_audit
+from app.database import async_session
 from app.models import Agent, AuditAction, User
-from app.schemas import ShellConnectRequest
 from app.ssh_bridge import connect_ssh_via_tunnel
 from app.tunnel import tunnel_manager
+
+logger = logging.getLogger("tunnelops.shell")
 
 router = APIRouter(prefix="/api/shell")
 
@@ -82,6 +83,14 @@ async def shell_session(websocket: WebSocket, agent_id: int):
                 private_key=private_key,
             )
         except Exception as exc:
+            logger.exception(
+                "Shell connect failed agent_id=%s user=%s auth=%s host=%s port=%s",
+                agent_id,
+                ssh_user,
+                auth_type,
+                host,
+                agent.ssh_port,
+            )
             await websocket.send_json({"type": "error", "message": str(exc)})
             await websocket.close()
             return

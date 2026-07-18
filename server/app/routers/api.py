@@ -344,10 +344,12 @@ async def get_deploy_script(
     ws_url = server_url.rstrip("/").replace("https://", "wss://").replace("http://", "ws://")
     ws_url = f"{ws_url}/api/tunnel/ws"
     script = f"""#!/bin/bash
-set -e
+set -euo pipefail
 SERVER_URL="{server_url.rstrip('/')}"
 AGENT_TOKEN="{agent.token}"
 AGENT_NAME="{agent.name}"
+INSTALL_DIR="/opt/tunnelops-agent"
+VENV_DIR="$INSTALL_DIR/venv"
 
 echo "==> Installing TunnelOps Agent for $AGENT_NAME"
 
@@ -355,15 +357,30 @@ if ! command -v python3 &>/dev/null; then
   echo "ERROR: python3 is required"
   exit 1
 fi
+if ! command -v curl &>/dev/null; then
+  echo "ERROR: curl is required"
+  exit 1
+fi
 
-INSTALL_DIR="/opt/tunnelops-agent"
+if ! python3 -c "import venv" 2>/dev/null; then
+  echo "==> Installing python3-venv..."
+  sudo apt-get update -qq
+  sudo apt-get install -y python3-venv curl
+fi
+
 sudo mkdir -p "$INSTALL_DIR"
 
 echo "==> Downloading agent..."
 sudo curl -fsSL "$SERVER_URL/static/agent/agent.py" -o "$INSTALL_DIR/agent.py"
 
-echo "==> Installing websockets..."
-sudo pip3 install websockets -q 2>/dev/null || sudo python3 -m pip install websockets -q
+echo "==> Creating Python virtual environment..."
+if [ ! -d "$VENV_DIR" ]; then
+  sudo python3 -m venv "$VENV_DIR"
+fi
+
+echo "==> Installing dependencies..."
+sudo "$VENV_DIR/bin/pip" install --upgrade pip -q
+sudo "$VENV_DIR/bin/pip" install "websockets>=14.1" -q
 
 echo "==> Creating systemd service..."
 sudo tee /etc/systemd/system/tunnelops-agent.service > /dev/null << EOF
@@ -374,10 +391,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+WorkingDirectory=$INSTALL_DIR
 Environment=TUNNELOPS_SERVER=$SERVER_URL
 Environment=TUNNELOPS_TOKEN=$AGENT_TOKEN
 Environment=TUNNELOPS_NAME=$AGENT_NAME
-ExecStart=/usr/bin/python3 $INSTALL_DIR/agent.py
+ExecStart=$VENV_DIR/bin/python $INSTALL_DIR/agent.py
 Restart=always
 RestartSec=5
 

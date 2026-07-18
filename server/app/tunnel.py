@@ -1,11 +1,15 @@
 import asyncio
 import json
+import logging
 import secrets
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from fastapi import WebSocket
+
+
+logger = logging.getLogger("tunnelops.tunnel")
 
 
 @dataclass
@@ -83,10 +87,13 @@ class TunnelManager:
             msg = await asyncio.wait_for(session.queue.get(), timeout=timeout)
         except asyncio.TimeoutError as exc:
             agent.pending_sessions.pop(session_id, None)
+            logger.error("Tunnel open timeout agent_id=%s host=%s port=%s", agent_id, host, port)
             raise ConnectionError("Tunnel open timeout") from exc
         if msg.get("type") != "tunnel_ready":
             agent.pending_sessions.pop(session_id, None)
-            raise ConnectionError(msg.get("error", "Tunnel open failed"))
+            error = msg.get("error", "Tunnel open failed")
+            logger.error("Tunnel open failed agent_id=%s host=%s port=%s error=%s", agent_id, host, port, error)
+            raise ConnectionError(error)
         return session
 
     async def close_tunnel(self, session: TunnelSession) -> None:

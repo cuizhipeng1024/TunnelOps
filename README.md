@@ -83,9 +83,11 @@ python -m app.main
 2. 点击「部署」，复制一键部署脚本
 3. 在内网 Linux 设备上执行（需要 root、python3、curl）：
 
+> Ubuntu 24 / Debian 12 禁止系统级 `pip install`，安装脚本会自动创建虚拟环境。
+
 ```bash
-curl -fsSL https://your-server/static/agent/agent.py -o /tmp/agent.py
-# 或使用界面生成的完整安装脚本
+# 使用 Web 界面「部署」生成的完整脚本（推荐）
+bash install-agent.sh
 ```
 
 手动运行 Agent：
