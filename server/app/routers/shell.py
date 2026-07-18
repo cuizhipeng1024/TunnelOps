@@ -11,7 +11,6 @@ from app.ssh_bridge import connect_ssh_via_tunnel
 from app.tunnel import tunnel_manager
 
 logger = logging.getLogger("tunnelops.shell")
-
 router = APIRouter(prefix="/api/shell")
 
 
@@ -30,6 +29,7 @@ async def shell_session(websocket: WebSocket, agent_id: int):
     await websocket.accept()
     auth = await _authenticate_ws(websocket)
     if not auth:
+        logger.warning("Shell unauthorized agent_id=%s", agent_id)
         await websocket.send_json({"type": "error", "message": "Unauthorized"})
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
@@ -41,7 +41,8 @@ async def shell_session(websocket: WebSocket, agent_id: int):
         auth_type = config.get("auth_type", "password")
         username = config.get("username")
         password = config.get("password")
-    except Exception:
+    except Exception as exc:
+        logger.warning("Shell invalid init agent_id=%s error=%s", agent_id, exc)
         await websocket.send_json({"type": "error", "message": "Invalid init message"})
         await websocket.close()
         return
@@ -50,10 +51,15 @@ async def shell_session(websocket: WebSocket, agent_id: int):
         agent = await db.get(Agent, agent_id)
         user = await db.get(User, user_id)
         if not agent:
+            logger.warning("Shell agent not found agent_id=%s", agent_id)
             await websocket.send_json({"type": "error", "message": "Agent not found"})
             await websocket.close()
             return
         if not tunnel_manager.is_online(agent_id):
+            logger.warning(
+                "Shell agent offline agent_id=%s (若使用 uvicorn --workers >1，请改为 --workers 1)",
+                agent_id,
+            )
             await websocket.send_json({"type": "error", "message": "Agent offline"})
             await websocket.close()
             return
@@ -67,6 +73,7 @@ async def shell_session(websocket: WebSocket, agent_id: int):
                 return
             private_key = user.ssh_private_key
         elif not password:
+            logger.warning("Shell password required agent_id=%s user=%s", agent_id, ssh_user)
             await websocket.send_json({"type": "error", "message": "Password required"})
             await websocket.close()
             return
@@ -102,6 +109,8 @@ async def shell_session(websocket: WebSocket, agent_id: int):
             target=agent.name,
             detail=f"user={ssh_user}, auth={auth_type}",
         )
+
+    logger.info("Shell connected agent_id=%s user=%s auth=%s", agent_id, ssh_user, auth_type)
 
     channel = ssh_client.invoke_shell(term="xterm-256color")
     channel.settimeout(0.0)

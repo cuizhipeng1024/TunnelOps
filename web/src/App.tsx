@@ -4,7 +4,8 @@ import { Spin } from 'antd';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Agents from './pages/Agents';
-import Terminal from './pages/Terminal';
+import Sessions from './pages/Sessions';
+import TerminalRedirect from './pages/Terminal';
 import Users from './pages/Users';
 import AuditLogs from './pages/AuditLogs';
 import Settings from './pages/Settings';
@@ -47,7 +48,8 @@ export default function App() {
         >
           <Route index element={<Navigate to="/agents" replace />} />
           <Route path="agents" element={<Agents />} />
-          <Route path="terminal/:agentId" element={<Terminal />} />
+          <Route path="sessions" element={<Sessions />} />
+          <Route path="terminal/:agentId" element={<TerminalRedirect />} />
           <Route path="users" element={<Users user={user!} />} />
           <Route path="audit" element={<AuditLogs />} />
           <Route path="settings" element={<Settings user={user!} onUpdate={setUser} />} />

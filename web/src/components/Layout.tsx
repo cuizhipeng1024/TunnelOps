@@ -1,6 +1,7 @@
 import { Layout as AntLayout, Menu, Button, Typography } from 'antd';
 import {
   CloudServerOutlined,
+  CodeOutlined,
   UserOutlined,
   AuditOutlined,
   SettingOutlined,
@@ -17,6 +18,7 @@ export default function Layout({ user, onLogout }: { user: User; onLogout: () =>
 
   const items = [
     { key: '/agents', icon: <CloudServerOutlined />, label: '设备管理' },
+    { key: '/sessions', icon: <CodeOutlined />, label: '终端会话' },
     { key: '/audit', icon: <AuditOutlined />, label: '审计日志' },
     { key: '/settings', icon: <SettingOutlined />, label: '个人设置' },
   ];
@@ -32,7 +34,11 @@ export default function Layout({ user, onLogout }: { user: User; onLogout: () =>
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={[location.pathname.startsWith('/terminal') ? '/agents' : location.pathname]}
+          selectedKeys={[
+            location.pathname.startsWith('/terminal') || location.pathname.startsWith('/sessions')
+              ? '/sessions'
+              : location.pathname,
+          ]}
           items={items}
           onClick={({ key }) => navigate(key)}
         />

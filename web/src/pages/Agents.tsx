@@ -106,9 +106,16 @@ export default function Agents() {
             size="small"
             icon={<ConsoleSqlOutlined />}
             disabled={record.status !== 'online'}
-            onClick={() => navigate(`/terminal/${record.id}`, { state: { agent: record } })}
+            onClick={() => navigate(`/sessions?agent=${record.id}`)}
           >
             连接
+          </Button>
+          <Button
+            size="small"
+            disabled={record.status !== 'online'}
+            onClick={() => window.open(`/sessions?agent=${record.id}`, '_blank')}
+          >
+            新窗口
           </Button>
           <Button size="small" onClick={() => openEdit(record)}>
             编辑
